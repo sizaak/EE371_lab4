@@ -1,3 +1,4 @@
+`timescale 1 ps / 1 ps
 module DE1_SoC (CLOCK_50, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, KEY, SW, LEDR);
 
  output logic [6:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5;
@@ -6,13 +7,15 @@ module DE1_SoC (CLOCK_50, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, KEY, SW, LEDR);
  input logic [9:0] SW;
  input logic CLOCK_50;
  
- logic Load_A, Update_L, Update_R, Found_True, Init_Bound, Found, Done, Start;
+ logic Load_A, Update_L, Update_R, Found_True, Init_Bound, Found, Done, Start, sync;
  logic [7:0] A, A_reg, Ram_Data;
  logic [4:0] L, L_Bound, R_Bound;
  
- D_FF d (.q(Start), .d(SW[9]), .reset(Reset), .clk(CLOCK_50));
+ D_FF d1 (.q(sync), .d(SW[9]), .reset(Resetn), .clk(CLOCK_50));
+ D_FF d2 (.q(Start), .d(sync), .reset(Resetn), .clk(CLOCK_50));
+
  
- assign Reset = ~KEY[0];
+ assign Resetn = ~KEY[0];
  assign LEDR[9] = Found;
  assign A = SW[7:0];
  
@@ -21,12 +24,12 @@ module DE1_SoC (CLOCK_50, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, KEY, SW, LEDR);
  assign HEX4 = 7'b1111111;
  assign HEX3 = 7'b1111111;
  assign HEX2 = 7'b1111111;
- assign HEX1 = 7'b1111111;
  
- controller_RTL c_unit (.Start, .Clock(Clock_50), .Reset, .A(A_reg), .Ram_Data, .L_Bound, .R_Bound, .Load_A, .Update_L, 
+ 
+ controller_RTL c_unit (.Start(Start), .Clock(CLOCK_50), .Resetn, .A(A_reg), .Ram_Data, .L_Bound, .R_Bound, .Load_A, .Update_L, 
 								.Update_R, .Found_True, .Init_Bound, .Done); 
 							
- Datapath_RTL d_unit (.Data_A(A), .Reset, .Clock(Clock_50), .Load_A, .Update_L, .Update_R, .Found_True, .Init_Bound, 
+ Datapath_RTL d_unit (.Data_A(A), .Resetn, .Clock(CLOCK_50), .Load_A, .Update_L, .Update_R, .Found_True, .Init_Bound, 
 								.A(A_reg), .Ram_Data, .L_Bound, .R_Bound, .Found, .L); 
 						
  seg7 seg1 (.hex({3'b0, L[4]}), .leds(HEX1));
@@ -34,7 +37,7 @@ module DE1_SoC (CLOCK_50, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, KEY, SW, LEDR);
  
 endmodule
 
-
+/*
 module clock_divider (reset, clock, divided_clocks); 
   input logic clock, reset; 
   output logic [31:0] divided_clocks;
@@ -47,8 +50,9 @@ module clock_divider (reset, clock, divided_clocks);
     end
   end 
 endmodule
+*/
 
-
+`timescale 1 ps / 1 ps
 module tb_DE1_SoC();
 	logic [6:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5;
 	logic [9:0] LEDR;
@@ -69,17 +73,18 @@ module tb_DE1_SoC();
 
 	initial begin
 		KEY[0] <= 0; SW[9] <= 0;@(posedge CLOCK_50);@(posedge CLOCK_50);
-		KEY[0] <= 1; SW[7:0] <= 8'b00000000;@(posedge CLOCK_50);@(posedge CLOCK_50);
+		KEY[0] <= 1; SW[7:0] <= 8'd0;@(posedge CLOCK_50);//Not Found & Left Half
 		SW[9] <= 1; 
-		for(int i = 0; i < 9; i++) @(posedge CLOCK_50);
+		for(int i = 0; i < 20; i++) @(posedge CLOCK_50);
 		SW[9] <= 0; @(posedge CLOCK_50);
-		SW[7:0] <= 8'b11111111;@(posedge CLOCK_50);@(posedge CLOCK_50);
+		
+		SW[7:0] <= 8'd70;@(posedge CLOCK_50);// Not Found & Right Half
 		SW[9] <= 1; 
-		for(int i = 0; i < 9; i++) @(posedge CLOCK_50);
+		for(int i = 0; i < 20; i++) @(posedge CLOCK_50);
 		SW[9] <= 0; @(posedge CLOCK_50);
-		SW[7:0] <= 8'b10101010;@(posedge CLOCK_50);@(posedge CLOCK_50);
+		SW[7:0] <= 8'd42;@(posedge CLOCK_50);@(posedge CLOCK_50); // Found
 		SW[9] <= 1; 
-		for(int i = 0; i < 9; i++) @(posedge CLOCK_50);
+		for(int i = 0; i < 20; i++) @(posedge CLOCK_50);
 		SW[9] <= 0; @(posedge CLOCK_50);@(posedge CLOCK_50);
 		$stop;
 	end
