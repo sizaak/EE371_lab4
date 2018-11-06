@@ -20,7 +20,9 @@ module Datapath_RTL (Data_A, Resetn, Clock, Load_A, Update_L, Update_R, Found_Tr
 		if(Resetn || Init_Bound) begin
 			L_Bound <= 0;
 			R_Bound <= 5'd31; // 31
+			Found <= 0;
 		end
+		if (Found_True) Found <= 1;
 		if(Load_A) A <= Data_A;
 		if(Update_L) L_Bound <= L_reg + 5'b00001;
 		else if(Update_R) R_Bound <= L_reg - 5'b00001;
@@ -34,7 +36,6 @@ module Datapath_RTL (Data_A, Resetn, Clock, Load_A, Update_L, Update_R, Found_Tr
 	//assign L = {L_Bound[4], L_B[15:1]};
 	assign Ram_Data = Ram_Data_reg;
 	assign L = L_reg;
-	assign Found = (Found_True == 1);
 
 endmodule
 

@@ -22,7 +22,7 @@ module controller_RTL (Start, Clock, Resetn, A, Ram_Data, L_Bound, R_Bound,
 				else next_state = S1; 
 			end
 			S2: begin
-				 if(A == Ram_Data || L_Bound == R_Bound) next_state = S4;
+				 if(A == Ram_Data || L_Bound >= R_Bound) next_state = S4;
 				 else next_state = S3;
 			end
 			S3: begin
