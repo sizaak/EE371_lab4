@@ -1,84 +1,49 @@
-`timescale 1 ps / 1 ps
-module Datapath_RTL (Data_A, Resetn, Clock, Load_A, Update_L, Update_R, Found_True, Init_Bound, 
-							A, Ram_Data, L_Bound, R_Bound, Found, L); 
+module Datapath_RTL (data_A, reset_b, result, clock, load_A, rightshift_A, result_zero, incr_result, z, a0); 
 	
-	input logic Resetn, Clock;
-	input logic Load_A, Update_L, Update_R, Found_True, Init_Bound;
-	input logic [7:0] Data_A;
-	output logic [7:0] A, Ram_Data;
-	output logic [4:0] L_Bound, R_Bound, L;
-	output logic Found;
+	input logic [7:0] data_A;
+	input logic clock, reset_b, load_A, rightshift_A, result_zero, incr_result;
+	output logic [3:0] result;
+	output logic z, a0;
 	
-	logic [4:0] L_reg;
-	logic [7:0] Ram_Data_reg;
-	logic [5:0] L_sum;
+	logic [7:0] A_reg;
+	logic [3:0] B_reg;
 	
-	// ram module size of 32 words 8 bit wide
-	ram32x8 r1 (.address(L_reg), .clock(Clock), .data(0), .wren(1'b0), .q(Ram_Data_reg));
-	
-	always_ff @(posedge Clock) begin
-		if(Resetn || Init_Bound) begin
-			L_Bound <= 0;
-			R_Bound <= 5'd31; // 31
-			Found <= 0;
-		end
-		if (Found_True) Found <= 1;
-		if(Load_A) A <= Data_A;
-		if(Update_L) L_Bound <= L_reg + 5'b00001;
-		else if(Update_R) R_Bound <= L_reg - 5'b00001;
+	always_ff @(posedge clock) begin
+		if(reset_b || result_zero)
+			B_reg <= 0;
+		else if(incr_result)
+			B_reg <= B_reg + 4'b0001;
+			
+		if(reset_b || load_A) A_reg <= data_A;
+		else if(rightshift_A) A_reg <= (A_reg >> 1);
 	end
 	
-	always_comb begin
-		L_sum = L_Bound + R_Bound;
-		L_reg = L_sum / 2;
-	end
-	
-	//assign L = {L_Bound[4], L_B[15:1]};
-	assign Ram_Data = Ram_Data_reg;
-	assign L = L_reg;
+	assign result = B_reg;
+	assign z = (A_reg == 0);
+	assign a0 = A_reg[0];
 
 endmodule
 
-`timescale 1 ps / 1 ps
+/*
 module tb_Datapath_RTL();
-	logic Resetn, Clock;
-	logic Load_A, Update_L, Update_R, Found_True, Init_Bound;
-	logic [7:0] Data_A;
-	logic [7:0] A, Ram_Data;
-	logic [4:0] L_Bound, R_Bound, L;
-	logic Found;
+	logic [7:0] data_A;
+	logic clock, reset_b, load_A, rightshift_A, result_zero, incr_result;
+	logic [3:0] result;
+	logic z, a0;
 	
 	parameter CLOCK_PERIOD = 100;
 	
-	Datapath_RTL dut (.Data_A, .Resetn, .Clock, .Load_A, .Update_L, .Update_R, .Found_True, .Init_Bound, 
-							.A, .Ram_Data, .L_Bound, .R_Bound, .Found, .L); 
+	Datapath_RTL dut (.data_A, .reset_b, .result, .clock, .load_A, .rightshift_A, .result_zero, .incr_result, .z, .a0);  
 
 	initial begin
-		Clock <= 0;
-		forever#(CLOCK_PERIOD/2) Clock = ~Clock;
+		clock <= 0;
+		forever#(CLOCK_PERIOD/2) clock = ~clock;
 	end
 
+
 	initial begin
-		Resetn <= 1; Load_A <= 0; Update_L <= 0; Update_R <= 0; 
-		Found_True <= 0; Init_Bound <= 0; Data_A <= 8'b00110000;@(posedge Clock);
-		Resetn <= 0; Init_Bound <= 1;@(posedge Clock);
-		Load_A <= 1; Init_Bound <= 0;@(posedge Clock);
-		Load_A <= 0; @(posedge Clock);
-		Update_L <= 1; Update_R <= 0; @(posedge Clock);
-		Update_L <= 1; Update_R <= 0; @(posedge Clock);
-		Update_L <= 1; Update_R <= 0; @(posedge Clock);
-		Update_L <= 1; Update_R <= 0; @(posedge Clock);
-		Update_L <= 1; Update_R <= 0; @(posedge Clock);
-		Update_L <= 0; Update_R <= 0; Found_True <= 1;@(posedge Clock);
-		Init_Bound <= 1; Found_True <= 0; @(posedge Clock);
-		Init_Bound <= 0;
-		Update_L <= 0; Update_R <= 1; @(posedge Clock);
-		Update_L <= 0; Update_R <= 1; @(posedge Clock);
-		Update_L <= 0; Update_R <= 1; @(posedge Clock);
-		Update_L <= 0; Update_R <= 1; @(posedge Clock);
-		Update_L <= 0; Update_R <= 1; @(posedge Clock);
-		Update_L <= 0; Update_R <= 0; Found_True <= 1;@(posedge Clock);
-		Init_Bound <= 1; Found_True <= 0; @(posedge Clock);
+	
 		$stop;
 	end
 endmodule
+*/
